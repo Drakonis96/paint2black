@@ -1,0 +1,9 @@
+Flask>=2.0
+pytesseract>=0.3.9
+PyPDF2>=3.0
+Pillow>=9.0
+numpy>=1.20
+opencv-python-headless>=4.5
+PyMuPDF>=1.20 # FitZ (para conversión y extracción de imágenes)
+gunicorn>=20.0
+Werkzeug>=2.0

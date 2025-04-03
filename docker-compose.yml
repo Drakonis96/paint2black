@@ -1,0 +1,20 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  paint2black:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paint2black_app
+    ports:
+      - "5018:5018"
+    # La sección 'volumes:' ha sido eliminada
+    environment:
+      PYTHONUNBUFFERED: 1
+    restart: unless-stopped
+
+# No necesitas la sección 'volumes:' de nivel superior si no usas volúmenes nombrados
+# volumes:
+#   paint2black_temp:

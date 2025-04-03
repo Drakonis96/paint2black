@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>paint2black & OCR</title>
+    <style>
+        /* --- General Styles --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            padding: 15px 20px;
+            margin: 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .main-container {
+            max-width: 750px;
+            width: 100%;
+            margin: 20px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #212529;
+            margin-bottom: 0.75em;
+            text-align: center;
+            font-weight: 600;
+        }
+        p {
+            color: #495057;
+            margin-bottom: 1.5em;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .hidden { display: none !important; } /* Use important to override potential conflicts */
+
+        /* --- Tabs --- */
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 25px;
+        }
+        .tab-button {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 1.1em;
+            font-weight: 500;
+            color: #6c757d;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+            margin-bottom: -2px; /* Overlap border */
+        }
+        .tab-button:hover {
+            color: #495057;
+        }
+        .tab-button.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .tab-content {
+            padding-top: 15px;
+        }
+
+        /* --- Forms & Controls --- */
+        .upload-section, .options-section {
+            margin-bottom: 25px;
+        }
+        .drop-zone {
+            border: 2px dashed #ced4da;
+            padding: 35px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.05em;
+        }
+        .drop-zone.dragover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        .file-info {
+            margin-top: 12px;
+            font-style: italic;
+            color: #6c757d;
+            word-wrap: break-word;
+            font-size: 0.95em;
+            min-height: 1.2em; /* Prevent layout shift */
+        }
+        .options label {
+            margin: 0 12px 10px 0;
+            font-size: 1em;
+            display: inline-block;
+            cursor: pointer;
+            color: #495057;
+        }
+        .options select {
+            padding: 9px 12px;
+            margin-left: 6px;
+            font-size: 0.95em;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            min-width: 90px;
+            vertical-align: middle;
+            background-color: #fff;
+        }
+         .options label input[type="radio"] {
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        /* --- Buttons --- */
+        .submit-button {
+            padding: 12px 28px;
+            font-size: 1.05em;
+            font-weight: 500;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+            display: block; /* Make button block */
+            width: 100%; /* Full width */
+            margin-top: 15px; /* Space above */
+            box-sizing: border-box;
+        }
+        .submit-button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+         .submit-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* --- Progress & Results --- */
+        .progress-container {
+            margin-top: 25px;
+            border: 1px solid #e9ecef;
+            padding: 18px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+         .progress-container p {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 1em;
+            text-align: left;
+        }
+        .status-message {
+            font-size: 0.9em;
+            color: #6c757d;
+            min-height: 1.2em;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        progress {
+            width: 100%;
+            height: 12px; /* Slimmer bar */
+            border-radius: 6px;
+            overflow: hidden;
+            background-color: #e9ecef;
+            -webkit-appearance: none; /* Override default appearance */
+            appearance: none;
+            border: none; /* Remove default border */
+        }
+        /* Webkit */
+        progress::-webkit-progress-bar { background-color: #e9ecef; border-radius: 6px;}
+        progress::-webkit-progress-value { background-color: #28a745; border-radius: 6px; transition: width 0.4s ease-out;}
+        /* Firefox */
+        progress::-moz-progress-bar { background-color: #28a745; border-radius: 6px; transition: width 0.4s ease-out;}
+
+        .result-container {
+            margin-top: 25px;
+            padding: 18px;
+            border: 1px solid #c3e6cb;
+            background-color: #d1e7dd;
+            border-radius: 8px;
+            text-align: center;
+        }
+         .result-container p {
+            color: #0f5132;
+            font-weight: 500;
+            margin-bottom: 15px;
+         }
+        .download-link {
+            display: inline-block;
+            padding: 10px 22px;
+            background-color: #198754; /* Bootstrap success green */
+            color: white !important;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+            font-size: 1em;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+        }
+        .download-link:hover { background-color: #157347; text-decoration: none; }
+
+        /* --- Error Messages --- */
+        .error-container { margin-top: 20px; }
+        .error-message {
+            color: #842029;
+            background-color: #f8d7da;
+            border: 1px solid #f5c2c7;
+            padding: 12px 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        /* --- Footer --- */
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        /* --- Responsive Adjustments --- */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .main-container { padding: 20px; }
+            h1 { font-size: 1.8em; }
+            p { font-size: 1em; }
+            .tab-button { padding: 10px 15px; font-size: 1em;}
+            .drop-zone { padding: 25px 15px; }
+            .options label { display: block; text-align: center; margin-right: 0; }
+            .options select { display: block; margin: 10px auto 15px auto; width: 80%; max-width: 220px; }
+            .submit-button { padding: 14px; }
+            .progress-container, .result-container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    <h1>Paint2Black & OCR Service</h1>
+    <p>Convert PDF colors and perform OCR in two simple steps.</p>
+
+    <!-- Tab Buttons -->
+    <div class="tab-buttons">
+        <!-- ========== CORRECCIÓN AQUÍ ========== -->
+        <button class="tab-button active" data-tab="convert">Step 1: Convert Color</button>
+        <button class="tab-button" data-tab="ocr">Step 2: Perform OCR</button>
+        <!-- ==================================== -->
+    </div>
+
+    <!-- Tab Content -->
+    <div id="convertTab" class="tab-content active">
+        <h2>Convert PDF Color</h2>
+        <form id="convert-form" action="{{ url_for('convert_color_request') }}">
+            <div class="upload-section">
+                <div class="drop-zone" id="convert-drop-zone">
+                    Drag & Drop PDF here or click to select (for Color Conversion)
+                    <input type="file" name="pdf_file" id="convert-file-input" accept="application/pdf" class="hidden" required>
+                    <p class="file-info" id="convert-file-info"></p>
+                </div>
+            </div>
+            <div class="options-section">
+                <label><input type="radio" name="mode" value="monochrome" checked> Monochrome ⚫⚪</label>
+                <label><input type="radio" name="mode" value="grayscale"> Grayscale 🌫️</label>
+            </div>
+            <button type="submit" class="submit-button" id="convert-submit-button">Start Conversion</button>
+        </form>
+        <div id="convert-error-container" class="error-container hidden">
+            <p class="error-message" id="convert-error-message"></p>
+        </div>
+        <div id="convert-progress-container" class="progress-container hidden">
+            <p>Conversion Progress:</p>
+            <div class="status-message" id="convert-status-message">Starting...</div>
+            <progress id="convert-progress-bar" max="100" value="0"></progress>
+        </div>
+        <div id="convert-result-container" class="result-container hidden">
+            <p id="convert-result-message"></p>
+            <a href="#" id="convert-download-link" class="download-link" target="_blank">Download Converted PDF 📥</a>
+        </div>
+    </div>
+
+    <div id="ocrTab" class="tab-content hidden">
+        <h2>Perform OCR on PDF</h2>
+        <form id="ocr-form" action="{{ url_for('perform_ocr_request') }}">
+            <div class="upload-section">
+                 <div class="drop-zone" id="ocr-drop-zone">
+                    Drag & Drop PDF here or click to select (for OCR)
+                    <input type="file" name="pdf_file_ocr" id="ocr-file-input" accept="application/pdf" class="hidden" required>
+                    <p class="file-info" id="ocr-file-info"></p>
+                </div>
+            </div>
+            <div class="options-section">
+                {% if supported_languages %}
+                <label for="lang">OCR Language:</label>
+                <select name="lang" id="lang">
+                    {% for lang_code in supported_languages %}
+                        <option value="{{ lang_code }}" {% if lang_code == 'eng' %}selected{% endif %}>{{ lang_code }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <p>No OCR languages configured.</p>
+                {% endif %}
+            </div>
+             <button type="submit" class="submit-button" id="ocr-submit-button">Start OCR</button>
+        </form>
+         <div id="ocr-error-container" class="error-container hidden">
+            <p class="error-message" id="ocr-error-message"></p>
+        </div>
+        <div id="ocr-progress-container" class="progress-container hidden">
+            <p>OCR Progress:</p>
+            <div class="status-message" id="ocr-status-message">Starting...</div>
+            <progress id="ocr-progress-bar" max="100" value="0"></progress>
+        </div>
+        <div id="ocr-result-container" class="result-container hidden">
+            <p id="ocr-result-message"></p>
+            <a href="#" id="ocr-download-link" class="download-link" target="_blank">Download OCR'd PDF 📥</a>
+        </div>
+    </div>
+
+</div> <!-- End Main Container -->
+
+<footer>
+    Simple PDF Tools
+</footer>
+
+<script>
+    // --- DOM Element References ---
+    const tabs = {
+        convert: {
+            button: document.querySelector('.tab-button[data-tab="convert"]'), // CORREGIDO
+            content: document.getElementById('convertTab'),
+            form: document.getElementById('convert-form'),
+            dropZone: document.getElementById('convert-drop-zone'),
+            fileInput: document.getElementById('convert-file-input'),
+            fileInfo: document.getElementById('convert-file-info'),
+            submitButton: document.getElementById('convert-submit-button'),
+            progressContainer: document.getElementById('convert-progress-container'),
+            progressBar: document.getElementById('convert-progress-bar'),
+            statusMessage: document.getElementById('convert-status-message'),
+            resultContainer: document.getElementById('convert-result-container'),
+            resultMessage: document.getElementById('convert-result-message'),
+            downloadLink: document.getElementById('convert-download-link'),
+            errorContainer: document.getElementById('convert-error-container'),
+            errorMessage: document.getElementById('convert-error-message')
+        },
+        ocr: {
+            button: document.querySelector('.tab-button[data-tab="ocr"]'), // CORREGIDO
+            content: document.getElementById('ocrTab'),
+            form: document.getElementById('ocr-form'),
+            dropZone: document.getElementById('ocr-drop-zone'),
+            fileInput: document.getElementById('ocr-file-input'),
+            fileInfo: document.getElementById('ocr-file-info'),
+            submitButton: document.getElementById('ocr-submit-button'),
+            progressContainer: document.getElementById('ocr-progress-container'),
+            progressBar: document.getElementById('ocr-progress-bar'),
+            statusMessage: document.getElementById('ocr-status-message'),
+            resultContainer: document.getElementById('ocr-result-container'),
+            resultMessage: document.getElementById('ocr-result-message'),
+            downloadLink: document.getElementById('ocr-download-link'),
+            errorContainer: document.getElementById('ocr-error-container'),
+            errorMessage: document.getElementById('ocr-error-message')
+        }
+    };
+
+    let currentEventSource = null; // Shared EventSource reference
+
+    // --- Utility Functions ---
+    function switchTab(targetTabKey) {
+        // Verifica que targetTabKey sea válido ('convert' o 'ocr')
+        if (!tabs[targetTabKey]) {
+            console.error("Invalid targetTabKey:", targetTabKey);
+            return;
+        }
+        console.log("Switching to tab:", targetTabKey); // Log para depuración
+        Object.keys(tabs).forEach(key => {
+            const isActive = key === targetTabKey;
+            tabs[key].button.classList.toggle('active', isActive);
+            tabs[key].content.classList.toggle('hidden', !isActive);
+            tabs[key].content.classList.toggle('active', isActive); // Clase 'active' en contenido (opcional)
+        });
+        // Close any active SSE connection when switching tabs
+        closeCurrentEventSource();
+    }
+
+    function showProcessingError(tabKey, message) {
+        const ui = tabs[tabKey];
+        if (!ui) return; // Safety check
+        ui.errorMessage.textContent = message;
+        ui.errorContainer.classList.remove('hidden');
+        ui.progressContainer.classList.add('hidden');
+        ui.resultContainer.classList.add('hidden');
+        ui.submitButton.disabled = false; // Re-enable button
+        closeCurrentEventSource(); // Ensure SSE connection is closed on error
+    }
+
+    function resetTabUI(tabKey) {
+        const ui = tabs[tabKey];
+         if (!ui) return; // Safety check
+        ui.errorContainer.classList.add('hidden');
+        ui.errorMessage.textContent = '';
+        ui.progressContainer.classList.add('hidden');
+        ui.resultContainer.classList.add('hidden');
+        ui.progressBar.value = 0;
+        ui.progressBar.removeAttribute('value'); // Ensure indeterminate style reset if used
+        ui.progressBar.max = 100;
+        ui.statusMessage.textContent = 'Starting...';
+        // Do not reset file input value itself, just the info display
+        ui.fileInfo.textContent = '';
+        ui.submitButton.disabled = false; // Ensure button is enabled initially
+        // Do not close SSE here automatically, let specific actions decide
+        // closeCurrentEventSource(); // Removed from here
+    }
+
+    function updateFileInfoDisplay(tabKey) {
+        const ui = tabs[tabKey];
+         if (!ui) return; // Safety check
+        resetTabUI(tabKey); // Reset status when file changes
+        if (ui.fileInput.files.length > 0) {
+            const file = ui.fileInput.files[0];
+            ui.fileInfo.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+        } else {
+            ui.fileInfo.textContent = "";
+        }
+        closeCurrentEventSource(); // Close SSE when file selection changes
+    }
+
+    function setupDragAndDrop(tabKey) {
+        const ui = tabs[tabKey];
+         if (!ui || !ui.dropZone) return; // Safety checks
+        ui.dropZone.addEventListener('click', () => ui.fileInput.click());
+        ui.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault(); ui.dropZone.classList.add('dragover');
+        });
+        ui.dropZone.addEventListener('dragleave', () => ui.dropZone.classList.remove('dragover'));
+        ui.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            ui.dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                const droppedFile = e.dataTransfer.files[0];
+                if (droppedFile.type === "application/pdf") {
+                    ui.fileInput.files = e.dataTransfer.files; // Assign files to input
+                    updateFileInfoDisplay(tabKey); // Update UI
+                } else {
+                    ui.fileInfo.textContent = "❌ Invalid file (PDF only)";
+                }
+            }
+        });
+        ui.fileInput.addEventListener('change', () => updateFileInfoDisplay(tabKey));
+    }
+
+    function handleFormSubmit(tabKey) {
+        const ui = tabs[tabKey];
+         if (!ui || !ui.form) return; // Safety checks
+        ui.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Reset UI elements specific to progress/results/errors for this tab ONLY
+            ui.errorContainer.classList.add('hidden');
+            ui.errorMessage.textContent = '';
+            ui.progressContainer.classList.add('hidden');
+            ui.resultContainer.classList.add('hidden');
+            closeCurrentEventSource(); // Ensure no old SSE connection lingers
+
+
+            if (ui.fileInput.files.length === 0) {
+                showProcessingError(tabKey, "Please select a PDF file first.");
+                return;
+            }
+
+            ui.submitButton.disabled = true;
+            ui.progressContainer.classList.remove('hidden'); // Show progress bar container
+            ui.statusMessage.textContent = 'Uploading and initializing task...';
+            ui.progressBar.value = 0; // Reset progress bar value
+            ui.progressBar.removeAttribute('value'); // Make indeterminate initially
+            ui.progressBar.max = 1;
+
+            const formData = new FormData(ui.form);
+
+            try {
+                const response = await fetch(ui.form.action, {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Server error: ${response.status}`);
+                }
+
+                if (data.task_id) {
+                    ui.statusMessage.textContent = 'Task started. Waiting for progress updates...';
+                    startEventSource(tabKey, data.task_id);
+                } else {
+                    throw new Error('Invalid response: Missing task ID.');
+                }
+            } catch (error) {
+                console.error(`Form submission error for ${tabKey}:`, error);
+                showProcessingError(tabKey, `Error starting task: ${error.message}`);
+                // Button is re-enabled within showProcessingError
+            }
+        });
+    }
+
+    function closeCurrentEventSource() {
+        if (currentEventSource) {
+            currentEventSource.close();
+            currentEventSource = null;
+            console.log("Closed existing EventSource connection.");
+        }
+    }
+
+    function startEventSource(tabKey, taskId) {
+        closeCurrentEventSource(); // Ensure only one connection is active
+
+        const ui = tabs[tabKey];
+        if (!ui) return; // Safety check
+        console.log(`SSE: Connecting for task ${taskId} on tab ${tabKey}`);
+        currentEventSource = new EventSource(`/stream/${taskId}`);
+
+        currentEventSource.onopen = () => {
+            console.log(`SSE: Connection opened for task ${taskId}`);
+            ui.statusMessage.textContent = 'Connected. Receiving progress...';
+        };
+
+        currentEventSource.onmessage = (event) => {
+            try {
+                const progressData = JSON.parse(event.data);
+                console.log(`SSE [${taskId}]:`, progressData);
+
+                 // Ensure UI elements still exist (user might navigate away fast)
+                if (!tabs[tabKey] || !tabs[tabKey].statusMessage || !tabs[tabKey].progressBar) {
+                     console.warn("SSE: UI elements for tab", tabKey, "no longer available. Closing source.");
+                     closeCurrentEventSource();
+                     return;
+                 }
+
+                ui.statusMessage.textContent = progressData.message || 'Processing...';
+
+                const total = parseInt(progressData.total, 10) || 0;
+                const current = parseInt(progressData.current, 10) || 0;
+
+                if (total > 0) {
+                    ui.progressBar.max = total;
+                    ui.progressBar.value = current;
+                } else if (progressData.status === 'processing' || progressData.status === 'starting' || progressData.status === 'extracting' || progressData.status === 'merging' || progressData.status === 'saving') {
+                    // If total isn't known yet but we are processing, show indeterminate
+                    ui.progressBar.removeAttribute('value');
+                    ui.progressBar.max = 1;
+                 } else {
+                     // Fallback if total is 0 and not clearly processing (e.g., queued)
+                     ui.progressBar.value = 0;
+                     ui.progressBar.max = 100;
+                 }
+
+
+                if (progressData.status === 'complete') {
+                    console.log(`SSE: Task ${taskId} completed.`);
+                    ui.progressContainer.classList.add('hidden');
+                    ui.resultMessage.textContent = progressData.message || 'Processing finished successfully.';
+                    // The download URL now uses the file_id directly which is the task_id
+                    ui.downloadLink.href = `/download/${progressData.result_file_id}`;
+                    ui.resultContainer.classList.remove('hidden');
+                    closeCurrentEventSource(); // Close connection on completion
+                    ui.submitButton.disabled = false; // Re-enable button
+                } else if (progressData.status === 'error') {
+                    console.error(`SSE: Task ${taskId} failed: ${progressData.message}`);
+                    showProcessingError(tabKey, `Task Error: ${progressData.message || 'Unknown error'}`);
+                    // Error handling already closes SSE and re-enables button
+                }
+            } catch (e) {
+                console.error(`SSE: Error parsing data for task ${taskId}:`, e, "Data:", event.data);
+                // Avoid showing error for parsing issues, wait for next message or error event
+            }
+        };
+
+        currentEventSource.onerror = (error) => {
+            console.error(`SSE: Connection error for task ${taskId}:`, error);
+             // Only show error if the process wasn't already marked complete or errored out visibly
+            if (!tabs[tabKey] || (!tabs[tabKey].resultContainer.classList.contains('hidden') || !tabs[tabKey].errorContainer.classList.contains('hidden'))) {
+                 // Already handled completion or error, likely just the connection closing normally after task end
+                 console.log(`SSE: Error event likely after task completion/error for ${taskId}. Ignoring visible error.`);
+            } else {
+                // If tab is still visible and no result/error shown, display connection error
+                showProcessingError(tabKey, 'Connection lost. Please check server status or try again.');
+            }
+            closeCurrentEventSource(); // Ensure cleanup
+             // Re-enable button if it was disabled
+            if(tabs[tabKey] && tabs[tabKey].submitButton) {
+                 tabs[tabKey].submitButton.disabled = false;
+            }
+        };
+    }
+
+
+    // --- Initialization ---
+    // Setup tab switching
+    document.querySelector('.tab-buttons').addEventListener('click', (e) => {
+        // Ensure the clicked element IS a tab button and has the data-tab attribute
+        const button = e.target.closest('.tab-button'); // Handle clicks inside button too
+        if (button && button.dataset.tab && !button.classList.contains('active')) {
+            switchTab(button.dataset.tab);
+        }
+    });
+
+    // Setup listeners for each tab
+    setupDragAndDrop('convert');
+    handleFormSubmit('convert');
+    setupDragAndDrop('ocr');
+    handleFormSubmit('ocr');
+
+    // Initial setup: Show the first tab
+    switchTab('convert'); // Start with the convert tab active
+
+</script>
+
+</body>
+</html>
