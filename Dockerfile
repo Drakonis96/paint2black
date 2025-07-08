@@ -35,7 +35,16 @@ COPY . .
 # 7. Create Non-root User
 RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser && \
     chown -R appuser:appuser /app
-USER appuser
+
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Run as root so the entrypoint can fix permissions before dropping privileges
+USER root
+
+# Use the entrypoint to adjust permissions then launch the app as appuser
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # 8. Expose Port
 EXPOSE 5018

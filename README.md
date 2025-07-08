@@ -61,6 +61,10 @@ The application provides a clean web interface with separate tabs for each step,
     docker run -p 5018:5018 -v "$(pwd)/temp:/app/temp" --rm --name paint2black-app paint2black-ocr
     ```
     *(Note: On Windows PowerShell, use `${pwd}` instead of `$(pwd)` for the volume path)*
+
+    The container's startup script automatically sets correct permissions on
+    `/app/temp`, so the application can write uploaded files without any manual
+    permission changes on the host.
 6.  **Access the Application:** Open your web browser and navigate to `http://localhost:5018`.
 
 ## Usage
